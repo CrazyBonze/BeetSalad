@@ -1,0 +1,611 @@
+# ============================================================
+# Beets Configuration (organized)
+# Purpose: Navidrome-friendly, clean paths, rich metadata
+# NOTE: Only section order/comments changed—settings unchanged
+# ============================================================
+
+# API keys and tokens live in a gitignored file.
+# Copy config.secret.yaml.example -> config.secret.yaml and fill in your keys.
+include:
+  - config.secret.yaml
+
+# -----------------------------
+# Core: Library & Directories
+# -----------------------------
+directory: /media/media/Music
+library: musiclibrary.blb
+art_filename: cover
+threaded: yes
+original_date: yes
+per_disc_numbering: yes
+ignore_hidden: no
+ignore: ['*~', 'System Volume Information', 'lost+found']
+path_sep_replace: ' '
+duplicate_verbose_prompt: yes
+
+
+ui:
+    terminal_width: 120
+
+# -----------------------------
+# Player/Server Compatibility
+# -----------------------------
+asciify_paths: yes
+id3v23: no
+
+# Files to ignore in album dirs
+clutter:
+  # - '*.jpg'
+  - '*.png'
+  - '*.jpeg'
+  - '*.gif'
+  - '*.cue'
+  - 'Thumbs.DB'
+  - '.DS_Store'
+
+# -----------------------------
+# Plugins
+# -----------------------------
+pluginpath: config/beetsplug
+plugins:
+
+  # --- Metadata / matching / analysis ---
+  # https://docs.beets.io/en/latest/plugins/chroma.html
+  # Acoustic fingerprinting to improve MusicBrainz matching
+  - chroma
+
+  # https://docs.beets.io/en/latest/plugins/musicbrainz.html
+  # Core metadata source used during import
+  - musicbrainz
+
+  # https://docs.beets.io/en/latest/plugins/lastgenre.html
+  # Fetch genres from Last.fm / MusicBrainz
+  - lastgenre
+  - typetogenre       # must come after lastgenre
+
+  # --- Import helpers / enrichment ---
+  # https://docs.beets.io/en/latest/plugins/fetchart.html
+  # Download album artwork during import
+  - fetchartextras    # must come before fetchart
+  - fetchart
+
+  # https://docs.beets.io/en/latest/plugins/albumtypes.html
+  # Adds album type metadata (EP, Single, Live, etc.)
+  - albumtypes
+
+  # --- Tag cleanup / normalization ---
+
+  # https://docs.beets.io/en/latest/plugins/ihate.html
+  # Automatically skip or warn about unwanted releases
+  - ihate
+
+  # https://docs.beets.io/en/latest/plugins/inline.html
+  # Adds inline Python functions for path formats & fields
+  - inline
+
+  # https://docs.beets.io/en/latest/plugins/zero.html
+  # Remove unwanted metadata fields
+  - zero
+
+  # https://docs.beets.io/en/latest/plugins/scrub.html
+  # Strip junk tags from files before writing clean metadata
+  - scrub
+
+  # --- Artwork embedding ---
+  # https://docs.beets.io/en/latest/plugins/embedart.html
+  # Embed album artwork into audio files
+  - embedart
+
+  # --- Audio processing (runs near end) ---
+  # Calculate ReplayGain loudness values
+  - rsgain
+
+  # https://docs.beets.io/en/latest/plugins/convert.html
+  # Transcode audio into other formats
+  - convert
+
+  # --- Utilities / UI ---
+  # https://docs.beets.io/en/latest/plugins/unimported.html
+  # Find music not yet imported into the library
+  - unimported
+
+  # https://docs.beets.io/en/latest/plugins/web.html
+  # Run the beets web interface
+  - web
+
+  # https://docs.beets.io/en/latest/plugins/fish.html
+  # Fish shell completions for beets CLI
+  - fish
+
+  # https://beets.readthedocs.io/en/stable/plugins/thumbnails.html
+  # thumbnails for your album folders with the album cover
+  - thumbnails
+
+  - hook
+
+  # check for missing and corrupt files
+  - audiohealth
+
+  # - deeprhythm_bpm
+  # - librosa_key
+  - discogs
+  # - navidrome_sync
+  - primaryartist
+  - fetchartist
+  - importnotify
+
+# navidrome_sync:
+#   url: http://192.168.0.80:30043
+#   user: michael
+#   pass: blue5953
+#   auth: token         # or "password"
+#   api_version: "1.16.1"
+
+deeprhythm_bpm:
+  auto: true
+  overwrite: false
+  sr: 11025
+
+librosa_key:
+  auto: true
+  overwrite: false
+  sr: 11025
+  t_start: 10
+  t_end: 130
+  format: standard   # standard | compact
+
+# -----------------------------
+# Web UI
+# -----------------------------
+web:
+  host: 0.0.0.0
+
+# -----------------------------
+# Import / Library Management
+# -----------------------------
+import:
+  write: yes
+  copy: no
+  move: yes
+  resume: ask
+  incremental: yes
+  #incremental_skip_later: yes
+  quiet_fallback: skip
+  timid: no
+  log: beet.log
+  per_disc_numbering: yes
+
+match:
+  preferred:
+    albumtype: album
+    sources: [musicbrainz]
+  distance_weights:
+    data_source: 0.0
+
+musicbrainz:
+  extra_tags: [tracks]
+  external_ids:
+    discogs: yes
+    spotify: yes
+    bandcamp: yes
+    beatport: yes
+    deezer: yes
+    tidal: yes
+  data_source_mismatch_penalty: 0.3  # Lower penalty = preferred
+
+discogs:
+    data_source_mismatch_penalty: 0.8  # Higher penalty = less preferred
+
+thumbnails:
+  auto: yes
+  force: yes
+
+# -----------------------------
+# Paths & Naming (methodology)
+# -----------------------------
+# Goals:
+# - One folder per album release: /AlbumArtist/(Year) Album [Type][aunique]/
+# - Track order is always preserved in dumb file browsers by putting track prefix first
+# - Multi-disc encoded in filename as DD-TT (e.g., 01-07) without Disc subfolders
+# - Keep "portable" rich filenames for Soulseek (Artist + Album + Title in the filename)
+#
+# Notes:
+# - Sorting is preserved as long as filenames start with track/disc-track.
+# - For compilations, we still keep track-first sorting, but include Track Artist for clarity:
+#   DD-TT - TrackArtist - Album - Title
+# - For non-compilations:
+#   DD-TT - AlbumArtist - Album - Title
+paths:
+  # Standard albums (non-comp)
+  default: %asciify{$primary_albumartist}/($year) %asciify{$album}%if{$atypes, $atypes,}%aunique{}/%if{$is_multi_disc,$disc_padded-$track_padded,$track_padded} - %asciify{$albumartist} - %asciify{$album} - %asciify{$title}
+
+  # Compilation albums (albumartist typically "Various Artists")
+  # Track-first to preserve order; include track artist for clarity
+  comp: %asciify{$primary_albumartist}/($year) %asciify{$album}%if{$atypes, $atypes,}%aunique{}/%if{$is_multi_disc,$disc_padded-$track_padded,$track_padded} - %asciify{$artist} - %asciify{$album} - %asciify{$title}
+
+  # Singleton tracks
+  # Keep portable naming: track number may not exist, so use Artist - Title
+  singleton: %asciify{$primary_albumartist}/%asciify{Singles}/%asciify{$artist} - %asciify{$title}%sunique{}
+
+
+# -----------------------------
+# Custom Fields & Templates
+# -----------------------------
+item_fields:
+  track_padded: "'%02i' % track"
+  disc_padded: "'%02i' % (disc or 0)"
+  is_multi_disc: 1 if disctotal > 1 else 0
+  tagged_album: album + (' (' + albumdisambig + ')' if albumdisambig else '')
+  import_date: |
+    from datetime import datetime
+    datetime.now().strftime('%Y/%m/%d')
+
+# -----------------------------
+# Filename Sanitization (portable + filesystem-safe)
+# -----------------------------
+# Goals:
+# - Ensure paths are safe across filesystems (especially Windows/SMB)
+# - Prevent hidden dotfiles and Windows trailing-dot/space issues
+# - Trim accidental whitespace introduced during transliteration
+# - Keep filenames readable and easy to type/search
+#
+# Notes:
+# - asciify_paths: yes runs BEFORE these rules and converts Unicode to ASCII
+#   using the Unidecode library (e.g., “Café” → “Cafe”, “★” → "*").
+# - These rules focus on filesystem safety and minor cleanup rather than
+#   aggressively normalizing artist-provided text.
+replace:
+  # --- Whitespace hygiene (Unidecode can introduce trailing spaces) ---
+  '^\s+': ''            # Trim leading whitespace
+  '\s+$': ''            # Trim trailing whitespace
+
+  # --- Hard safety (cross-platform) ---
+  '[\\/]': ' '          # No directory separators in names
+  '[\x00-\x1f]': ''     # Drop control chars entirely (less noisy than '_')
+  '^\.\.\.': '_'
+  '^\.': '_'            # Avoid hidden dotfiles
+  #'[\. ]$': '_'         # Windows: no trailing dot/space
+
+  # --- Windows-illegal characters ---
+  ':': ' -'             # Keep readability for "Artist: Title"
+  '[<>]': ''            # Drop angle brackets
+  '\|': '-'             # Pipes become dashes
+  '\~': '-'
+  '\*': '_'             # * often comes from ★ via Unidecode
+  '\?': ''              # Remove question marks
+  '"': "'"              # Quotes -> apostrophe (less destructive than removing)
+
+  # --- Readability normalization ---
+  '\s+': ' '            # Collapse multiple spaces
+
+
+# -----------------------------
+# Album Types (for $atypes)
+# -----------------------------
+albumtypes:
+  types:
+    - ep: 'EP'
+    #- single: 'Single'
+    #- soundtrack: 'OST'
+    - live: 'Live'
+    #- compilation: 'Anthology'
+    #- remix: 'Remix'
+  ignore_va: compilation
+  bracket: '[]'
+
+rsgain:
+  auto: yes
+  threads: 0
+  overwrite: yes
+
+# -----------------------------
+# Uniqueness Disambiguation
+# -----------------------------
+aunique:
+  keys: albumartist album
+  disambiguators: albumdisambig releasegroupdisambig albumtype year label catalognum
+  bracket: '[]'
+
+# -----------------------------
+# Conversion (manual by default)
+# -----------------------------
+convert:
+  auto: no
+  ffmpeg: /usr/bin/ffmpeg
+  opts: -ab 320k -ac 2 -ar 48000
+  max_bitrate: 320
+  threads: 1
+
+audiohealth:
+ 
+    # Run checks automatically during import.
+    auto: yes
+ 
+    # When to stop and ask during import.
+    #   none     — never stop, just log to screen + database (default)
+    #   critical — stop only when a file can't be served at all
+    #   error    — stop on audible corruption or worse
+    #   warn     — stop on any non-ignored issue
+    #   all      — stop on everything
+    stop_on_error: none
+ 
+    # Recheck items that already have an audiohealth result.
+    overwrite: no
+ 
+    # Severity classification rules.
+    # Each list is a set of Python regex patterns (case-insensitive).
+    # Check order: ignore → critical → error → warn → default(error).
+    # Lines matching nothing default to error (unknown stderr = suspicious).
+    severity_rules:
+ 
+        # CRITICAL: Navidrome / streaming servers can't serve the file.
+        # Container broken, codec unrecognizable, no decodable stream.
+        critical:
+            - "moov atom not found"
+            - "Invalid NAL unit size"
+            - "no audio.*found"
+            - "misdetection possible"
+            - "Format .+ detected only with low score"
+ 
+        # ERROR: Audible corruption — pops, gaps, distortion.
+        # Decoder recovers but listener hears the damage.
+        error:
+            - "invalid sync code"
+            - "invalid frame header"
+            - "decode_frame.*failed"
+            - "FLAC__STREAM_DECODER_ERROR"
+ 
+        # WARN: Technically imperfect but sounds fine on playback.
+        # Sporadic single-frame issues, minor container metadata.
+        warn:
+            - "Header missing"
+            - "Error while decoding"
+            - "Error submitting.*packet"
+            - "Could not find codec parameters"
+            - "max_analyze_duration"
+            - "overread"
+            - "CRC mismatch"
+            - "Estimating duration"
+            - "invalid data found"
+            - "missing picture"
+            - "invalid new backstep"
+            - "big_values too big"
+            - "not enough frames to estimate"
+            - "Discarding corrupted packet"
+ 
+        # IGNORE: No impact on anything.
+        ignore:
+            - "non.monoton"
+            - "Discarding ID3 tags"
+            - "Last message repeated"
+            - "deprecated pixel format"
+            - "Application provided invalid"
+            - "Queue input is backward"
+            - "sample/frame number mismatch"
+            - "Discarding padding"
+            - "Could not update timestamps"
+ 
+    # Count-based escalation.
+    # When a lower-tier pattern fires many times in one file, the
+    # cumulative damage is worse than any single hit suggests.
+    #
+    #   warn_to_error:    5+ warn hits in one file → escalate to error.
+    #                     One "Header missing" is fine; five means several
+    #                     frames are damaged and you'll hear it.
+    #
+    #   error_to_critical: 10+ error hits in one file → escalate to critical.
+    #                      Many frame-level errors means the decoder is
+    #                      spending more time recovering than playing.
+    #                      Navidrome transcoding will likely choke.
+    #
+    # Set to 0 to disable that escalation path.
+    escalation:
+        warn_to_error: 5
+        error_to_critical: 10
+
+
+# -----------------------------
+# Artwork: Fetch & Embed
+# -----------------------------
+fetchart:
+  auto: yes
+  force: yes
+  cautious: yes
+  replace: yes
+  cover_names: cover # front art album folder        # Common cover file names
+  minwidth: 200                 # Minimum CAA width
+  maxwidth: 1200                # Maximum CAA width
+  quality: 75
+  max_filesize: 1000000         # ~1 MB target
+  cover_format: JPEG
+  deinterlace: yes              # non-progressive JPEG (better device compatibility)
+  sources:
+    - filesystem                # Local files you already have. With cautious: yes, it only accepts well-named covers, so it's usually the safest/most intentional.
+    - cover_art_url             # where Discogs (or anything else) can feed a known-good URL
+    - coverart: release         # MusicBrainz *release* MBID → Cover Art Archive. Most precise: edition-specific when mb_albumid is present.
+    - spotify                   # Uses spotify_album_id → album page → og:image. Very accurate if spotify_album_id is correct.
+    - lastfm                    # Uses MusicBrainz release MBID via Last.fm API. Strong ID match, but depends on Last.fm's mapping/metadata.
+    # discogs: id               # injected by fetchartextras at runtime
+    # deezer: id                # injected by fetchartextras at runtime
+    - fanarttv                  # Uses MusicBrainz release-group MBID. Good ID-based match, but picks "most liked" art (can be alternate/reissue).
+    - amazon                    # Uses ASIN → deterministic image URL. Accurate if ASIN is correct, wrong if ASIN is missing/incorrect.
+    - albumart                  # Also uses ASIN, but via HTML scraping/regex (more brittle than Amazon direct).
+    - wikipedia                 # DBpedia/Wikipedia lookup uses regex on album name; more constrained than Google, but still can collide on similar titles.
+    - coverart: releasegroup    # MusicBrainz *release-group* MBID → CAA. Still ID-based, but can return a valid cover for a different edition.
+    # discogs: search           # injected by fetchartextras at runtime
+    # deezer: search            # injected by fetchartextras at runtime
+    # wikidata                  # injected by fetchartextras at runtime
+    # itunesplus                # injected by fetchartextras at runtime
+    - itunes                    # Text search + exact string check (good) BUT it always yields a fallback (candidates[0]) which can be a false positive—so keep late.
+  # NOTE: custom sources (discogs, deezer, wikidata, itunesplus) are registered
+  # and injected into the sources list by the fetchartextras plugin at runtime.
+  store_source: yes
+  enforce_ratio: 9%
+  fanarttv_key: ""   # set in config.secret.yaml
+  lastfm_key: ""    # set in config.secret.yaml
+
+fetchartextras:
+  discogs_token: ""  # set in config.secret.yaml
+  discogs_user_agent: "beets/fetchartextras (+https://beets.io)"
+  discogs_search_limit: 10
+  discogs_strict_search: yes
+  deezer_search_limit: 10
+  wikidata_limit: 8
+  itunes_strict_year: yes
+  itunes_search_limit: 50
+
+embedart:
+  auto: yes
+  maxwidth: 1200
+  compare_threshold: 0
+  ifempty: yes
+
+fetchartist:
+    # Run automatically during import
+    auto: yes
+
+    # Overwrite existing artist images
+    overwrite: no
+
+    # Skip questionable matches
+    cautious: no
+
+    # Source priority (space-separated, tried in order)
+    # Available: filesystem fanarttv theaudiodb spotify wikidata discogs
+    sources: filesystem fanarttv theaudiodb spotify wikidata discogs
+
+    # Output filename (without extension)
+    filename: artist
+
+    # Filenames the filesystem source looks for
+    cover_names:
+        - artist
+
+    # Image constraints
+    minwidth: 300          # minimum width in pixels (0 = no minimum)
+    maxwidth: 2000            # maximum width – resize if larger (0 = no limit)
+    enforce_ratio: yes     # require approximately square images
+    ratio_tolerance: 0.5   # how far from 1:1 is acceptable (0.5 = up to 3:2)
+    cover_format: JPEG          # force output format: JPEG, PNG, WEBP (blank = keep original)
+    quality: 75             # JPEG quality 1-100 (0 = default)
+    max_filesize: 1000000        # max file size in bytes (0 = no limit)
+
+    # API credentials
+    fanarttv_key: ""          # set in config.secret.yaml
+    fanarttv_client_key:      # fanart.tv personal key (optional, faster updates)
+    theaudiodb_key: "2"       # TheAudioDB API key (default free key works)
+    spotify_client_id:        # set in config.secret.yaml
+    spotify_client_secret:    # set in config.secret.yaml
+    discogs_token: ""         # set in config.secret.yaml
+
+    # Misc
+    request_timeout: 15      # HTTP timeout in seconds
+    wikidata_search_limit: 5 # max Wikidata entity search results
+
+hook:
+  hooks:
+    - event: import_task_start
+      command: >
+        bash -lc '
+          d="{task.paths[0]}";
+          # task.paths[0] is the directory being imported (album dir)
+          if [ -f "$d/.no_fetchart" ]; then
+            exit 0
+          fi
+          rm -f "$d"/albumart.[0-9]*.jpg "$d"/albumart.[0-9]*.jpeg "$d"/albumart.[0-9]*.png;
+          rm -f "$d"/albumart.jpg "$d"/albumart.jpeg "$d"/albumart.png
+        '
+    - event: album_imported
+      command: >
+        bash -lc 'd="{album.path}";
+        find "$d" -maxdepth 1 -type f
+        \( -iname "albumart.[0-9]*.jpg" -o -iname "albumart.[0-9]*.jpeg" -o -iname "albumart.[0-9]*.png" \)
+        -delete'
+    - event: album_imported
+      command: >
+        bash -lc '
+          d="{album.path}";
+          art="albumart.jpg";
+
+          # If beets thinks album.path is a Disc folder, compute the parent as the album root.
+          base="$d";
+          b="$(basename "$d")";
+          if [[ "$b" =~ ^Disc[[:space:]]+[0-9]+$ ]]; then
+            base="$(dirname "$d")";
+          fi
+
+          # If art exists in the disc folder but not in the album root, copy it up.
+          if [ -f "$d/$art" ] && [ ! -f "$base/$art" ]; then
+            cp -f "$d/$art" "$base/$art";
+          fi
+
+          # Also ensure every Disc folder has the art (optional but very Navidrome-safe).
+          if [ -f "$base/$art" ]; then
+            for discdir in "$base"/Disc\ *; do
+              [ -d "$discdir" ] || continue
+              cp -f "$base/$art" "$discdir/$art"
+            done
+          fi
+        '
+
+
+# -----------------------------
+# Audio Fingerprinting
+# -----------------------------
+chroma:
+  auto: yes
+
+# -----------------------------
+# Genre Tagging
+# -----------------------------
+lastgenre:
+  auto: yes
+  source: album          # or 'track' if you want per-track genres
+  count: 5               # up to 5 tags
+  min_weight: 10         # a bit more permissive than 10
+  whitelist: yes         # keep the internal whitelist (filter garbage)
+  canonical: yes         # use the built-in tree
+  prefer_specific: yes   # choose more specific when possible
+  force: yes             # always (re)fetch genres
+  keep_existing: yes     # combine existing + new (or set to 'no' to overwrite)
+  fallback: ''           # reset to empty if nothing valid is found
+  whitelist: config/genres.txt
+  canonical: config/genres-tree.yaml
+
+typetogenre:
+  auto: yes
+  map:
+    soundtrack: yes       # -> "Soundtrack"
+    live: yes             # -> "Live"
+    spokenword: yes       # -> "Spoken Word"
+    audiobook: yes        # -> "Audiobook"
+
+# -----------------------------
+# Skip/Filter Rules
+# -----------------------------
+ihate:
+  skip:
+    - artist:Various Artists
+
+# -----------------------------
+# Unimported Files Report
+# -----------------------------
+unimported:
+  ignore_extensions: jpg png
+  ignore_subdirectories: Playlists temp
+
+# -----------------------------
+# Field Cleanup
+# -----------------------------
+zero:
+  auto: yes
+  fields:
+    - comments
+    - encoder
+    - grouping
+    - asin
+    - script
+    - language
+  update_database: true
+
+

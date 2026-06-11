@@ -14,7 +14,6 @@ wheels/
 
 # Secrets / tokens
 config/discogs_token.json
-config/config.yaml
 config/config.secret.yaml
 
 # Generated / runtime files
