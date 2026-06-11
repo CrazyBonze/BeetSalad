@@ -1,0 +1,28 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Database
+*.db
+
+# Secrets / tokens
+config/discogs_token.json
+config/config.yaml
+
+# Generated / runtime files
+config/.bash_history
+config/.cache/
+config/*.log
+config/*.lock
+config/*.pickle
+config/*.blb
+config/*.md5
+config/**/*.md5
+config/**/*.bin
