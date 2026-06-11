@@ -25,7 +25,7 @@ duplicate_verbose_prompt: yes
 
 
 ui:
-    terminal_width: 120
+  terminal_width: 120
 
 # -----------------------------
 # Player/Server Compatibility
@@ -194,7 +194,7 @@ musicbrainz:
   data_source_mismatch_penalty: 0.3  # Lower penalty = preferred
 
 discogs:
-    data_source_mismatch_penalty: 0.8  # Higher penalty = less preferred
+  data_source_mismatch_penalty: 0.8  # Higher penalty = less preferred
 
 thumbnails:
   auto: yes
@@ -217,15 +217,15 @@ thumbnails:
 #   DD-TT - AlbumArtist - Album - Title
 paths:
   # Standard albums (non-comp)
-  default: %asciify{$primary_albumartist}/($year) %asciify{$album}%if{$atypes, $atypes,}%aunique{}/%if{$is_multi_disc,$disc_padded-$track_padded,$track_padded} - %asciify{$albumartist} - %asciify{$album} - %asciify{$title}
+  default: "%asciify{$primary_albumartist}/($year) %asciify{$album}%if{$atypes, $atypes,}%aunique{}/%if{$is_multi_disc,$disc_padded-$track_padded,$track_padded} - %asciify{$albumartist} - %asciify{$album} - %asciify{$title}"
 
   # Compilation albums (albumartist typically "Various Artists")
   # Track-first to preserve order; include track artist for clarity
-  comp: %asciify{$primary_albumartist}/($year) %asciify{$album}%if{$atypes, $atypes,}%aunique{}/%if{$is_multi_disc,$disc_padded-$track_padded,$track_padded} - %asciify{$artist} - %asciify{$album} - %asciify{$title}
+  comp: "%asciify{$primary_albumartist}/($year) %asciify{$album}%if{$atypes, $atypes,}%aunique{}/%if{$is_multi_disc,$disc_padded-$track_padded,$track_padded} - %asciify{$artist} - %asciify{$album} - %asciify{$title}"
 
   # Singleton tracks
   # Keep portable naming: track number may not exist, so use Artist - Title
-  singleton: %asciify{$primary_albumartist}/%asciify{Singles}/%asciify{$artist} - %asciify{$title}%sunique{}
+  singleton: "%asciify{$primary_albumartist}/%asciify{Singles}/%asciify{$artist} - %asciify{$title}%sunique{}"
 
 
 # -----------------------------
@@ -317,10 +317,10 @@ convert:
   threads: 1
 
 audiohealth:
- 
+
     # Run checks automatically during import.
     auto: yes
- 
+
     # When to stop and ask during import.
     #   none     — never stop, just log to screen + database (default)
     #   critical — stop only when a file can't be served at all
@@ -328,16 +328,16 @@ audiohealth:
     #   warn     — stop on any non-ignored issue
     #   all      — stop on everything
     stop_on_error: none
- 
+
     # Recheck items that already have an audiohealth result.
     overwrite: no
- 
+
     # Severity classification rules.
     # Each list is a set of Python regex patterns (case-insensitive).
     # Check order: ignore → critical → error → warn → default(error).
     # Lines matching nothing default to error (unknown stderr = suspicious).
     severity_rules:
- 
+
         # CRITICAL: Navidrome / streaming servers can't serve the file.
         # Container broken, codec unrecognizable, no decodable stream.
         critical:
@@ -346,7 +346,7 @@ audiohealth:
             - "no audio.*found"
             - "misdetection possible"
             - "Format .+ detected only with low score"
- 
+
         # ERROR: Audible corruption — pops, gaps, distortion.
         # Decoder recovers but listener hears the damage.
         error:
@@ -354,7 +354,7 @@ audiohealth:
             - "invalid frame header"
             - "decode_frame.*failed"
             - "FLAC__STREAM_DECODER_ERROR"
- 
+
         # WARN: Technically imperfect but sounds fine on playback.
         # Sporadic single-frame issues, minor container metadata.
         warn:
@@ -372,7 +372,7 @@ audiohealth:
             - "big_values too big"
             - "not enough frames to estimate"
             - "Discarding corrupted packet"
- 
+
         # IGNORE: No impact on anything.
         ignore:
             - "non.monoton"
@@ -384,7 +384,7 @@ audiohealth:
             - "sample/frame number mismatch"
             - "Discarding padding"
             - "Could not update timestamps"
- 
+
     # Count-based escalation.
     # When a lower-tier pattern fires many times in one file, the
     # cumulative damage is worse than any single hit suggests.
@@ -607,5 +607,3 @@ zero:
     - script
     - language
   update_database: true
-
-

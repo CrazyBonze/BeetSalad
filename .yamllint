@@ -13,4 +13,6 @@ rules:
     allowed-values: ["true", "false", "yes", "no", "on", "off"]
     level: warning
   indentation:
+    spaces: consistent
     indent-sequences: whatever
+    level: warning
