@@ -27,3 +27,7 @@ config/*.blb
 config/*.md5
 config/**/*.md5
 config/**/*.bin
+
+# Generated genre files (built by the wrapper from upstream + custom sources)
+config/genres.txt
+config/genres-tree.yaml
