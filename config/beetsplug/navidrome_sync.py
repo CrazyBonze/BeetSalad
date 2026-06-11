@@ -97,7 +97,9 @@ class NavidromeSync(BeetsPlugin):
         if self.config["skip_if_scanning"].get(bool):
             try:
                 if self._is_scanning():
-                    self._log.debug("NavidromeSync: already scanning; skipping startScan")
+                    self._log.debug(
+                        "NavidromeSync: already scanning; skipping startScan"
+                    )
                     return
             except Exception as exc:
                 # If status check fails, still attempt scan (best effort).
@@ -139,7 +141,9 @@ class NavidromeSync(BeetsPlugin):
 
         return payload
 
-    def _get(self, endpoint: str, extra: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def _get(
+        self, endpoint: str, extra: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         url = self._format_url(endpoint)
         params = self._base_payload()
         if extra:
@@ -153,7 +157,12 @@ class NavidromeSync(BeetsPlugin):
         if self.config["dry_run"].get(bool):
             self._log.info("NavidromeSync dry_run: GET {} params={}", url, params)
             if endpoint == "getScanStatus":
-                return {"subsonic-response": {"status": "ok", "scanStatus": {"scanning": False}}}
+                return {
+                    "subsonic-response": {
+                        "status": "ok",
+                        "scanStatus": {"scanning": False},
+                    }
+                }
             return {"subsonic-response": {"status": "ok"}}
 
         r = requests.get(url, params=params, timeout=15)

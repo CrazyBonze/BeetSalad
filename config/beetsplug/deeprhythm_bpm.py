@@ -89,7 +89,7 @@ def _load_mono_ffmpeg(
         )
     if not proc.stdout:
         raise RuntimeError(
-            f"ffmpeg produced no audio data (file may be too short or silent)"
+            "ffmpeg produced no audio data (file may be too short or silent)"
             + (f": {err[:200]}" if err else "")
         )
 
@@ -104,13 +104,12 @@ class DeepRhythmBPMPlugin(BeetsPlugin):
         # Tiny config: only what affects behavior.
         self.config.add(
             {
-                "auto": True,        # run on import
+                "auto": True,  # run on import
                 "overwrite": False,  # overwrite existing bpm
-
                 # Decode/analysis controls (kept minimal, but useful):
-                "sr": 22050,         # sample rate fed into the model
-                "t_start": 0.0,      # seconds; where to start analyzing
-                "t_end": 180.0,      # seconds; cap for speed
+                "sr": 22050,  # sample rate fed into the model
+                "t_start": 0.0,  # seconds; where to start analyzing
+                "t_end": 180.0,  # seconds; cap for speed
             }
         )
 

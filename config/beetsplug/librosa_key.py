@@ -108,7 +108,7 @@ def _load_mono_ffmpeg(
         )
     if not proc.stdout:
         raise RuntimeError(
-            f"ffmpeg produced no audio data (file may be too short or silent)"
+            "ffmpeg produced no audio data (file may be too short or silent)"
             + (f": {err[:200]}" if err else "")
         )
 
@@ -123,10 +123,10 @@ class LibrosaKeyPlugin(BeetsPlugin):
             {
                 "auto": True,
                 "overwrite": False,
-                "t_start": 0.0,      # seconds
-                "t_end": 120.0,      # seconds; keep bounded for speed
-                "sr": 22050,         # librosa default-ish; lower = faster
-                "format": "standard" # standard | compact | camelot | openkey (latter two optional)
+                "t_start": 0.0,  # seconds
+                "t_end": 120.0,  # seconds; keep bounded for speed
+                "sr": 22050,  # librosa default-ish; lower = faster
+                "format": "standard",  # standard | compact | camelot | openkey (latter two optional)
             }
         )
 
@@ -134,7 +134,9 @@ class LibrosaKeyPlugin(BeetsPlugin):
             self.import_stages = [self.imported]
 
     def commands(self):
-        cmd = Subcommand("librosa_key", help="detect and add initial_key from audio using librosa")
+        cmd = Subcommand(
+            "librosa_key", help="detect and add initial_key from audio using librosa"
+        )
         cmd.func = self.command
         return [cmd]
 
@@ -172,8 +174,11 @@ class LibrosaKeyPlugin(BeetsPlugin):
         # Suppress any remaining n_fft warnings from librosa for borderline-length
         # audio that still passes the check above.
         import warnings
+
         with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", message=r"n_fft=\d+ is too large", category=UserWarning)
+            warnings.filterwarnings(
+                "ignore", message=r"n_fft=\d+ is too large", category=UserWarning
+            )
             # Chroma energy normalized per-frame; then average over time to a single profile.
             chroma = librosa.feature.chroma_cqt(y=y, sr=sr)
         profile = chroma.mean(axis=1)
@@ -230,7 +235,9 @@ class LibrosaKeyPlugin(BeetsPlugin):
             try:
                 est = self._estimate_key(audio_path)
                 if not est:
-                    self._log.debug("Skipping {} (too short or silent to detect key)", shown)
+                    self._log.debug(
+                        "Skipping {} (too short or silent to detect key)", shown
+                    )
                     continue
                 tonic, mode = est
                 key_str = self._format_key(tonic, mode)

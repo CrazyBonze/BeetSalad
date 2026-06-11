@@ -33,3 +33,9 @@ package = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["beetwrap"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.17",
+    "yamllint>=1.38.0",
+]

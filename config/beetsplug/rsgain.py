@@ -43,7 +43,6 @@ from beets.ui import Subcommand
 from beets.util import displayable_path
 
 if TYPE_CHECKING:
-    from beets.importer import ImportSession, ImportTask
     from beets.library import Item, Library
 
 
@@ -82,6 +81,7 @@ def _tag_names(ext: str) -> tuple:
 # ---------------------------------------------------------------------------
 # rsgain runner
 # ---------------------------------------------------------------------------
+
 
 def _run_rsgain_easy(directory: str, threads: int = 0, overwrite: bool = True) -> bool:
     """Run ``rsgain easy`` on *directory*.
@@ -129,6 +129,7 @@ def _run_rsgain_easy(directory: str, threads: int = 0, overwrite: bool = True) -
 # Tag reading helpers
 # ---------------------------------------------------------------------------
 
+
 def _read_rg_tags(item: "Item") -> dict:
     """Read ReplayGain tags from *item*'s file and return a dict of values.
 
@@ -149,6 +150,7 @@ def _read_rg_tags(item: "Item") -> dict:
     # Use mutagen directly for the most reliable tag reading.
     try:
         import mutagen
+
         audio = mutagen.File(path, easy=False)
     except Exception:
         return {}
@@ -213,6 +215,7 @@ def _store_rg_tags(item: "Item") -> bool:
 # Directory grouping helper
 # ---------------------------------------------------------------------------
 
+
 def _group_by_directory(items: List["Item"]) -> Dict[str, List["Item"]]:
     """Group *items* by their containing directory."""
     groups: Dict[str, List["Item"]] = defaultdict(list)
@@ -228,16 +231,18 @@ def _group_by_directory(items: List["Item"]) -> Dict[str, List["Item"]]:
 # Plugin
 # ---------------------------------------------------------------------------
 
-class RsgainPlugin(BeetsPlugin):
 
+class RsgainPlugin(BeetsPlugin):
     def __init__(self) -> None:
         super().__init__()
 
-        self.config.add({
-            "auto": True,
-            "threads": 0,
-            "overwrite": False,
-        })
+        self.config.add(
+            {
+                "auto": True,
+                "threads": 0,
+                "overwrite": False,
+            }
+        )
 
         if self.config["auto"].get(bool):
             self.register_listener("album_imported", self.on_album_imported)
@@ -299,13 +304,19 @@ class RsgainPlugin(BeetsPlugin):
             help="scan items with rsgain and write ReplayGain tags",
         )
         cmd.parser.add_option(
-            "-f", "--force",
-            action="store_true", default=False, dest="force",
+            "-f",
+            "--force",
+            action="store_true",
+            default=False,
+            dest="force",
             help="re-scan files that already have ReplayGain tags",
         )
         cmd.parser.add_option(
-            "-t", "--threads",
-            type="int", default=None, dest="threads",
+            "-t",
+            "--threads",
+            type="int",
+            default=None,
+            dest="threads",
             metavar="N",
             help="number of parallel threads (default: all CPU cores)",
         )
@@ -318,7 +329,11 @@ class RsgainPlugin(BeetsPlugin):
             ui.print_("No items matched the query.")
             return
 
-        threads = opts.threads if opts.threads is not None else self.config["threads"].get(int)
+        threads = (
+            opts.threads
+            if opts.threads is not None
+            else self.config["threads"].get(int)
+        )
         overwrite = opts.force or self.config["overwrite"].get(bool)
 
         groups = _group_by_directory(items)
@@ -332,10 +347,17 @@ class RsgainPlugin(BeetsPlugin):
             ok, err = _run_rsgain_easy(directory, threads=threads, overwrite=overwrite)
             if ok:
                 stored = sum(1 for item in dir_items if _store_rg_tags(item))
-                self._log.debug("rsgain: stored tags for {}/{} items in {}", stored, len(dir_items), shown)
+                self._log.debug(
+                    "rsgain: stored tags for {}/{} items in {}",
+                    stored,
+                    len(dir_items),
+                    shown,
+                )
                 scanned += 1
             else:
-                self._log.warning("rsgain failed for {}: {}", shown, err or "(no output)")
+                self._log.warning(
+                    "rsgain failed for {}: {}", shown, err or "(no output)"
+                )
                 failed += 1
 
         ok_str = ui.colorize("text_success", f"{scanned} ok")

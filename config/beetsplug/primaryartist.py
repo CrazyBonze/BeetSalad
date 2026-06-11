@@ -68,9 +68,7 @@ if BeetsPlugin is not None:
                 return name, mbid
 
         # No multi-value fields available — fall back to scalar.
-        name = getattr(model, "albumartist", None) or getattr(
-            model, "artist", None
-        )
+        name = getattr(model, "albumartist", None) or getattr(model, "artist", None)
         mbid = getattr(model, "mb_albumartistid", None) or getattr(
             model, "mb_artistid", None
         )
@@ -98,26 +96,24 @@ if BeetsPlugin is not None:
         def __init__(self):
             super().__init__()
 
-            self.config.add({
-                "auto": True,
-                "preferred_artists": [],
-            })
+            self.config.add(
+                {
+                    "auto": True,
+                    "preferred_artists": [],
+                }
+            )
 
             self.album_template_fields["primary_albumartist"] = (
                 _tmpl_primary_albumartist
             )
-            self.template_fields["primary_albumartist"] = (
-                _tmpl_primary_albumartist_item
-            )
+            self.template_fields["primary_albumartist"] = _tmpl_primary_albumartist_item
 
             if self.config["auto"].get(bool):
                 self.register_listener(
                     "import_task_files",
                     self._on_import_task_files,
                 )
-                self.register_listener(
-                    "item_imported", self._on_item_imported
-                )
+                self.register_listener("item_imported", self._on_item_imported)
 
         # ---- import events ------------------------------------------------
 
@@ -157,15 +153,19 @@ if BeetsPlugin is not None:
 
             self._log.info(
                 "primaryartist: {0} -> {1}",
-                album.albumartist, name,
+                album.albumartist,
+                name,
             )
 
             # Re-fire art_set for the thumbnails plugin.
             artpath = album.artpath
             if artpath and os.path.exists(artpath):
                 from beets import plugins as beets_plugins
+
                 beets_plugins.send(
-                    "art_set", album=album, artpath=artpath,
+                    "art_set",
+                    album=album,
+                    artpath=artpath,
                 )
 
         def _on_item_imported(self, lib, item):
@@ -187,13 +187,17 @@ if BeetsPlugin is not None:
                 help="set primary_albumartist on existing albums",
             )
             cmd.parser.add_option(
-                "-p", "--pretend",
-                action="store_true", default=False,
+                "-p",
+                "--pretend",
+                action="store_true",
+                default=False,
                 help="show changes without applying them",
             )
             cmd.parser.add_option(
-                "-d", "--debug",
-                action="store_true", default=False,
+                "-d",
+                "--debug",
+                action="store_true",
+                default=False,
                 help="dump all relevant fields for matching albums",
             )
             cmd.func = self._cmd_primaryartist
@@ -221,10 +225,7 @@ if BeetsPlugin is not None:
                     continue
 
                 if opts.pretend:
-                    ui.print_(
-                        f"  {album.albumartist} -> {name}"
-                        f"  [{album.album}]"
-                    )
+                    ui.print_(f"  {album.albumartist} -> {name}  [{album.album}]")
                     continue
 
                 album["primary_albumartist"] = name
@@ -240,14 +241,18 @@ if BeetsPlugin is not None:
 
                 self._log.info(
                     "primaryartist: {0} -> {1}  [{2}]",
-                    album.albumartist, name, album.album,
+                    album.albumartist,
+                    name,
+                    album.album,
                 )
 
                 artpath = album.artpath
                 if artpath:
                     from beets import plugins as beets_plugins
+
                     beets_plugins.send(
-                        "art_set", album=album,
+                        "art_set",
+                        album=album,
                         artpath=artpath,
                     )
 
@@ -285,21 +290,21 @@ if BeetsPlugin is not None:
                 # Flex attrs
                 flex = getattr(album, "_values_flex", {})
                 if flex:
-                    ui.print_(f"\n  --- Flex attributes ---")
+                    ui.print_("\n  --- Flex attributes ---")
                     for k, v in sorted(flex.items()):
                         ui.print_(f"  {k:30s}          = {v!r}")
                 else:
-                    ui.print_(f"\n  --- No flex attributes ---")
+                    ui.print_("\n  --- No flex attributes ---")
 
                 # What _get_primary returns
                 name, mbid = _get_primary(album)
-                ui.print_(f"\n  --- _get_primary result ---")
+                ui.print_("\n  --- _get_primary result ---")
                 ui.print_(f"  primary_name:  {name!r}")
                 ui.print_(f"  primary_mbid:  {mbid!r}")
 
                 # What _resolve returns
                 rname, rmbid = self._resolve(album)
-                ui.print_(f"\n  --- _resolve result ---")
+                ui.print_("\n  --- _resolve result ---")
                 ui.print_(f"  resolved_name: {rname!r}")
                 ui.print_(f"  resolved_mbid: {rmbid!r}")
 
@@ -307,7 +312,7 @@ if BeetsPlugin is not None:
                 items = list(album.items())
                 if items:
                     item = items[0]
-                    ui.print_(f"\n  --- First item fields ---")
+                    ui.print_("\n  --- First item fields ---")
                     for field in [
                         "artist",
                         "artists",
@@ -321,9 +326,7 @@ if BeetsPlugin is not None:
                     ]:
                         val = getattr(item, field, "«not set»")
                         typ = type(val).__name__
-                        ui.print_(
-                            f"  {field:30s} ({typ:8s}) = {val!r}"
-                        )
+                        ui.print_(f"  {field:30s} ({typ:8s}) = {val!r}")
 
             ui.print_("")
 

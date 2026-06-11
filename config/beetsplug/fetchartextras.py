@@ -103,26 +103,26 @@ class FetchArtExtrasPlugin(BeetsPlugin):
                 return None
 
         def _artist_match(left: str | None, right: str | None) -> bool:
-            l = _norm(left)
-            r = _norm(right)
-            if not l or not r:
+            ln = _norm(left)
+            rn = _norm(right)
+            if not ln or not rn:
                 return False
-            if l == r:
+            if ln == rn:
                 return True
             va_aliases = {"various artists", "various", "va"}
-            return l in va_aliases and r in va_aliases
+            return ln in va_aliases and rn in va_aliases
 
         def _title_exact(left: str | None, right: str | None) -> bool:
-            l = _norm(left)
-            r = _norm(right)
-            return bool(l and r and l == r)
+            ln = _norm(left)
+            rn = _norm(right)
+            return bool(ln and rn and ln == rn)
 
         def _title_soft(left: str | None, right: str | None) -> bool:
-            l = _norm(left)
-            r = _norm(right)
-            if not l or not r:
+            ln = _norm(left)
+            rn = _norm(right)
+            if not ln or not rn:
                 return False
-            return l == r or l in r or r in l
+            return ln == rn or ln in rn or rn in ln
 
         def _year_match(candidate_year, album_year) -> bool:
             if not _extras()["itunes_strict_year"].get(bool):
@@ -201,17 +201,23 @@ class FetchArtExtrasPlugin(BeetsPlugin):
                     counts[rid] = counts.get(rid, 0) + 1
 
             if not counts:
-                source._log.debug("discogs: no album-level or item-level release id found")
+                source._log.debug(
+                    "discogs: no album-level or item-level release id found"
+                )
                 return None
 
             source._log.debug("discogs: item-level release id counts {}", counts)
 
             ranked = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
             if len(ranked) == 1 or ranked[0][1] > ranked[1][1]:
-                source._log.debug("discogs: resolved item-level release id {}", ranked[0][0])
+                source._log.debug(
+                    "discogs: resolved item-level release id {}", ranked[0][0]
+                )
                 return ranked[0][0]
 
-            source._log.debug("discogs: ambiguous item-level release ids; skipping exact id mode")
+            source._log.debug(
+                "discogs: ambiguous item-level release ids; skipping exact id mode"
+            )
             return None
 
         def _itunes_results(source, album) -> list[dict]:
@@ -339,7 +345,9 @@ class FetchArtExtrasPlugin(BeetsPlugin):
                 yielded = 0
                 for img in sorted(images, key=sort_key):
                     if (img.get("type") or "").lower() == "secondary":
-                        self._log.debug("discogs: skipping secondary image (type=secondary)")
+                        self._log.debug(
+                            "discogs: skipping secondary image (type=secondary)"
+                        )
                         continue
                     url = img.get("uri") or img.get("resource_url")
                     if not url:
@@ -438,7 +446,9 @@ class FetchArtExtrasPlugin(BeetsPlugin):
                     if release_id:
                         payload = self._release(release_id)
                         if payload:
-                            yield from self._yield_images(payload, fa.MetadataMatch.EXACT)
+                            yield from self._yield_images(
+                                payload, fa.MetadataMatch.EXACT
+                            )
                             return
 
                 if "search" in self.match_by:
@@ -483,10 +493,14 @@ class FetchArtExtrasPlugin(BeetsPlugin):
                         return None
                     return data
                 except (requests.RequestException, ValueError) as exc:
-                    self._log.debug("deezer: album lookup failed for {}: {}", album_id, exc)
+                    self._log.debug(
+                        "deezer: album lookup failed for {}: {}", album_id, exc
+                    )
                     return None
 
-            def _matches_payload(self, payload: dict, album, soft: bool = False) -> bool:
+            def _matches_payload(
+                self, payload: dict, album, soft: bool = False
+            ) -> bool:
                 payload_artist = (payload.get("artist") or {}).get("name")
                 payload_title = payload.get("title") or payload.get("title_short")
                 artist_ok = _artist_match(payload_artist, album.albumartist)
@@ -553,7 +567,9 @@ class FetchArtExtrasPlugin(BeetsPlugin):
                         self._log.debug("deezer: using exact album id {}", album_id)
                         payload = self._lookup_album(album_id)
                         if payload:
-                            yield from self._yield_cover(payload, fa.MetadataMatch.EXACT)
+                            yield from self._yield_cover(
+                                payload, fa.MetadataMatch.EXACT
+                            )
                             return
 
                 if "search" in self.match_by:
@@ -592,7 +608,9 @@ class FetchArtExtrasPlugin(BeetsPlugin):
                     self._log.debug("wikidata: entity search failed: {}", exc)
                     return []
                 results = [r.get("id") for r in data.get("search") or [] if r.get("id")]
-                self._log.debug("wikidata: query={!r} -> {} entities", query, len(results))
+                self._log.debug(
+                    "wikidata: query={!r} -> {} entities", query, len(results)
+                )
                 return results
 
             def _entity_image_names(self, entity_ids: list[str]) -> Iterator[str]:
@@ -622,7 +640,11 @@ class FetchArtExtrasPlugin(BeetsPlugin):
                             continue
 
             def _commons_image_url(self, filename: str) -> Optional[str]:
-                title = filename if str(filename).startswith("File:") else f"File:{filename}"
+                title = (
+                    filename
+                    if str(filename).startswith("File:")
+                    else f"File:{filename}"
+                )
                 try:
                     response = self.request(
                         self.COMMONS_URL,
@@ -637,7 +659,9 @@ class FetchArtExtrasPlugin(BeetsPlugin):
                     response.raise_for_status()
                     data = response.json()
                 except (requests.RequestException, ValueError) as exc:
-                    self._log.debug("wikidata: commons image lookup failed for {}: {}", title, exc)
+                    self._log.debug(
+                        "wikidata: commons image lookup failed for {}: {}", title, exc
+                    )
                     return None
 
                 for page in (data.get("query") or {}).get("pages", {}).values():
@@ -664,7 +688,9 @@ class FetchArtExtrasPlugin(BeetsPlugin):
                         if not image_url or image_url in seen:
                             continue
                         seen.add(image_url)
-                        yield self._candidate(url=image_url, match=fa.MetadataMatch.FALLBACK)
+                        yield self._candidate(
+                            url=image_url, match=fa.MetadataMatch.FALLBACK
+                        )
 
         class ITunesPlus(fa.RemoteArtSource):
             NAME = "iTunes Store (safe)"
@@ -709,7 +735,6 @@ class FetchArtExtrasPlugin(BeetsPlugin):
 
         def _patched_fa_init(fa_self, *args, **kwargs):
             _orig_fa_init(fa_self, *args, **kwargs)
-            sources_by_id = {s.ID: type(s) for s in fa_self.sources}
             log = fa_self._log
 
             def _make(cls, criteria):
@@ -717,19 +742,18 @@ class FetchArtExtrasPlugin(BeetsPlugin):
 
             # Build the injected source instances.
             injected = [
-                _make(DiscogsArt,  "id"),
-                _make(DeezerArt,   "id"),
-                _make(DiscogsArt,  "search"),
-                _make(DeezerArt,   "search"),
+                _make(DiscogsArt, "id"),
+                _make(DeezerArt, "id"),
+                _make(DiscogsArt, "search"),
+                _make(DeezerArt, "search"),
                 _make(WikidataArt, "default"),
-                _make(ITunesPlus,  "default"),
+                _make(ITunesPlus, "default"),
             ]
 
             # Insert discogs:id and deezer:id right after lastfm (index after
             # the last lastfm entry), and the rest before itunes at the tail.
             # Simpler: splice them in at the documented positions.
             new_sources = []
-            tail_ids = {"discogs", "deezer", "wikidata", "itunesplus"}
             tail = []
             for src in fa_self.sources:
                 sid = src.__class__.ID
@@ -746,8 +770,10 @@ class FetchArtExtrasPlugin(BeetsPlugin):
                     insert_after_lastfm = i + 1
                     break
 
-            id_sources = injected[:2]   # discogs:id, deezer:id
-            rest_sources = injected[2:] # discogs:search, deezer:search, wikidata, itunesplus
+            id_sources = injected[:2]  # discogs:id, deezer:id
+            rest_sources = injected[
+                2:
+            ]  # discogs:search, deezer:search, wikidata, itunesplus
 
             new_sources[insert_after_lastfm:insert_after_lastfm] = id_sources
             fa_self.sources = new_sources + rest_sources + tail

@@ -116,17 +116,13 @@ class TypeToGenrePlugin(BeetsPlugin):
         for type_key in albumtypes:
             type_key = type_key.lower().strip()
             if type_key not in map_config:
-                self._log.debug(
-                    "Type '{}' not in typetogenre map, skipping.", type_key
-                )
+                self._log.debug("Type '{}' not in typetogenre map, skipping.", type_key)
                 continue
 
             genre_str = _resolve_genre_string(type_key, map_config[type_key])
             if genre_str:
                 genres_to_add.append(genre_str)
-                self._log.debug(
-                    "Type '{}' -> genre '{}'", type_key, genre_str
-                )
+                self._log.debug("Type '{}' -> genre '{}'", type_key, genre_str)
 
         return genres_to_add
 
@@ -144,11 +140,15 @@ class TypeToGenrePlugin(BeetsPlugin):
         if isinstance(raw, list):
             existing: list[str] = list(raw)
         elif isinstance(raw, str) and raw:
-            existing = [g.strip() for g in raw.replace(";", ",").split(",") if g.strip()]
+            existing = [
+                g.strip() for g in raw.replace(";", ",").split(",") if g.strip()
+            ]
         else:
             # Fall back to the legacy singular field if present.
             legacy = album.get("genre") or ""
-            existing = [g.strip() for g in legacy.replace(";", ",").split(",") if g.strip()]
+            existing = [
+                g.strip() for g in legacy.replace(";", ",").split(",") if g.strip()
+            ]
 
         existing_lower = {g.lower() for g in existing}
 
@@ -168,7 +168,7 @@ class TypeToGenrePlugin(BeetsPlugin):
 
         # Write back to whichever field is active.
         if album.get("genres") is not None or not hasattr(album, "genre"):
-            album.genres = existing          # beets >= 2.7
+            album.genres = existing  # beets >= 2.7
         else:
             album.genre = ", ".join(existing)  # beets < 2.7 fallback
 

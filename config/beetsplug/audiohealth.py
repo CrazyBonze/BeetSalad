@@ -70,10 +70,10 @@ _SEV_RANK = {
 
 # Map severities to beets color keys.
 _SEV_COLOR = {
-    SEV_OK: "text_success",             # bold green
-    SEV_WARN: "text_warning",           # bold yellow
-    SEV_ERROR: "text_error",            # bold red
-    SEV_CRITICAL: "text_error",         # bold red (same as error)
+    SEV_OK: "text_success",  # bold green
+    SEV_WARN: "text_warning",  # bold yellow
+    SEV_ERROR: "text_error",  # bold red
+    SEV_CRITICAL: "text_error",  # bold red (same as error)
 }
 
 
@@ -101,6 +101,7 @@ def _colorize(color_key: str, text: str) -> str:
         _colorize._resolved = None  # type: ignore[attr-defined]
         return text
     return fn(color_key, text)
+
 
 _colorize._resolved = _colorize  # sentinel  # type: ignore[attr-defined]
 
@@ -134,6 +135,7 @@ def _should_stop(stop_level: str, severity: str) -> bool:
 # ---------------------------------------------------------------------------
 # Check result container
 # ---------------------------------------------------------------------------
+
 
 class CheckResult:
     """Holds the outcome of checking one audio file."""
@@ -173,6 +175,7 @@ class CheckResult:
 # ---------------------------------------------------------------------------
 # Severity rules  (regex classifier + count-based escalation)
 # ---------------------------------------------------------------------------
+
 
 class SeverityRules:
     """Compiled regex patterns for classifying ffmpeg stderr lines.
@@ -235,8 +238,10 @@ class SeverityRules:
         warn_count = counts.get(SEV_WARN, 0)
         error_count = counts.get(SEV_ERROR, 0)
 
-        promote_warn = (self.warn_to_error > 0 and warn_count >= self.warn_to_error)
-        promote_error = (self.error_to_critical > 0 and error_count >= self.error_to_critical)
+        promote_warn = self.warn_to_error > 0 and warn_count >= self.warn_to_error
+        promote_error = (
+            self.error_to_critical > 0 and error_count >= self.error_to_critical
+        )
 
         if not promote_warn and not promote_error:
             return
@@ -273,6 +278,7 @@ class SeverityRules:
 # Checker base class
 # ---------------------------------------------------------------------------
 
+
 class BaseChecker:
     """Abstract checker.  Subclass for format-specific tools."""
 
@@ -289,6 +295,7 @@ class BaseChecker:
 # FFmpeg checker
 # ---------------------------------------------------------------------------
 
+
 class FFmpegChecker(BaseChecker):
     """Decode the entire file with ``ffmpeg -f null`` and classify stderr."""
 
@@ -302,9 +309,12 @@ class FFmpegChecker(BaseChecker):
 
         cmd = [
             "ffmpeg",
-            "-v", "error",
-            "-i", path,
-            "-f", "null",
+            "-v",
+            "error",
+            "-i",
+            path,
+            "-f",
+            "null",
             "-",
         ]
 
@@ -330,7 +340,9 @@ class FFmpegChecker(BaseChecker):
 
         # Non-zero exit with no stderr → file couldn't be opened at all.
         if proc.returncode != 0 and not stderr:
-            result.add(SEV_CRITICAL, f"ffmpeg exited with code {proc.returncode} (no output)")
+            result.add(
+                SEV_CRITICAL, f"ffmpeg exited with code {proc.returncode} (no output)"
+            )
             return result
 
         if not stderr:
@@ -357,50 +369,50 @@ class FFmpegChecker(BaseChecker):
 
 # Critical: Navidrome / streaming servers will fail to serve the file.
 DEFAULT_CRITICAL = [
-    r"moov atom not found",             # MP4/M4A container completely broken
-    r"Invalid NAL unit size",           # video codec garbage in audio file
-    r"no audio.*found",                 # no decodable audio stream at all
-    r"misdetection possible",           # ffmpeg can't identify the format
-    r"Format .+ detected only with low score", # container barely recognisable
+    r"moov atom not found",  # MP4/M4A container completely broken
+    r"Invalid NAL unit size",  # video codec garbage in audio file
+    r"no audio.*found",  # no decodable audio stream at all
+    r"misdetection possible",  # ffmpeg can't identify the format
+    r"Format .+ detected only with low score",  # container barely recognisable
 ]
 
 # Error: Audible corruption — pops, gaps, distortion.
 DEFAULT_ERROR = [
-    r"invalid sync code",               # FLAC frame sync bytes mangled
-    r"invalid frame header",            # frame structure broken
-    r"decode_frame.*failed",            # decoder gave up on a frame
-    r"FLAC__STREAM_DECODER_ERROR",      # native FLAC decoder error
+    r"invalid sync code",  # FLAC frame sync bytes mangled
+    r"invalid frame header",  # frame structure broken
+    r"decode_frame.*failed",  # decoder gave up on a frame
+    r"FLAC__STREAM_DECODER_ERROR",  # native FLAC decoder error
 ]
 
 # Warn: Technically imperfect but sounds fine on playback.
 DEFAULT_WARN = [
-    r"Header missing",                  # MP3: sporadic missing frame header
-    r"Error while decoding",            # occasional single-frame hiccup
-    r"Error submitting.*packet",        # downstream of a single bad frame
-    r"Could not find codec parameters", # stream probe difficulty
-    r"max_analyze_duration",            # probe timeout
-    r"overread",                        # reading past buffer edge
-    r"CRC mismatch",                    # single-frame CRC failure
-    r"Estimating duration",             # container missing duration
-    r"invalid data found",              # ambiguous, could be minor
-    r"missing picture",                 # cover art metadata absent
-    r"invalid new backstep",            # MP3 bit reservoir glitch
-    r"big_values too big",              # MP3 Huffman table overrun
-    r"not enough frames to estimate",   # short stream probe issue
-    r"Discarding corrupted packet",     # single packet dropped
+    r"Header missing",  # MP3: sporadic missing frame header
+    r"Error while decoding",  # occasional single-frame hiccup
+    r"Error submitting.*packet",  # downstream of a single bad frame
+    r"Could not find codec parameters",  # stream probe difficulty
+    r"max_analyze_duration",  # probe timeout
+    r"overread",  # reading past buffer edge
+    r"CRC mismatch",  # single-frame CRC failure
+    r"Estimating duration",  # container missing duration
+    r"invalid data found",  # ambiguous, could be minor
+    r"missing picture",  # cover art metadata absent
+    r"invalid new backstep",  # MP3 bit reservoir glitch
+    r"big_values too big",  # MP3 Huffman table overrun
+    r"not enough frames to estimate",  # short stream probe issue
+    r"Discarding corrupted packet",  # single packet dropped
 ]
 
 # Ignore: No impact on anything.
 DEFAULT_IGNORE = [
-    r"non.monoton",                     # DTS timestamp jitter
-    r"Discarding ID3 tags",             # ID3 in FLAC containers
-    r"Last message repeated",           # ffmpeg dedup line
-    r"deprecated pixel format",         # cover art encoding detail
-    r"Application provided invalid",    # minor API-level note
-    r"Queue input is backward",         # timestamp reorder
-    r"sample/frame number mismatch",    # minor sync blip in Vorbis
-    r"Discarding padding",              # padding trimmed on decode
-    r"Could not update timestamps",     # benign muxer note
+    r"non.monoton",  # DTS timestamp jitter
+    r"Discarding ID3 tags",  # ID3 in FLAC containers
+    r"Last message repeated",  # ffmpeg dedup line
+    r"deprecated pixel format",  # cover art encoding detail
+    r"Application provided invalid",  # minor API-level note
+    r"Queue input is backward",  # timestamp reorder
+    r"sample/frame number mismatch",  # minor sync blip in Vorbis
+    r"Discarding padding",  # padding trimmed on decode
+    r"Could not update timestamps",  # benign muxer note
 ]
 
 
@@ -408,34 +420,34 @@ DEFAULT_IGNORE = [
 # Plugin
 # ---------------------------------------------------------------------------
 
-class AudioHealthPlugin(BeetsPlugin):
 
+class AudioHealthPlugin(BeetsPlugin):
     def __init__(self) -> None:
         super().__init__()
 
-        self.config.add({
-            "auto": True,
-            "stop_on_error": "none",
-            "overwrite": False,
-            "severity_rules": {
-                "critical": list(DEFAULT_CRITICAL),
-                "error": list(DEFAULT_ERROR),
-                "warn": list(DEFAULT_WARN),
-                "ignore": list(DEFAULT_IGNORE),
-            },
-            "escalation": {
-                "warn_to_error": 5,
-                "error_to_critical": 10,
-            },
-        })
+        self.config.add(
+            {
+                "auto": True,
+                "stop_on_error": "none",
+                "overwrite": False,
+                "severity_rules": {
+                    "critical": list(DEFAULT_CRITICAL),
+                    "error": list(DEFAULT_ERROR),
+                    "warn": list(DEFAULT_WARN),
+                    "ignore": list(DEFAULT_IGNORE),
+                },
+                "escalation": {
+                    "warn_to_error": 5,
+                    "error_to_critical": 10,
+                },
+            }
+        )
 
         self._rules: Optional[SeverityRules] = None
         self._checkers: Optional[List[BaseChecker]] = None
 
         if self.config["auto"].get(bool):
-            self.register_listener(
-                "import_task_start", self.on_import_task_start
-            )
+            self.register_listener("import_task_start", self.on_import_task_start)
             self.register_listener(
                 "import_task_before_choice", self.on_import_task_before_choice
             )
@@ -596,8 +608,7 @@ class AudioHealthPlugin(BeetsPlugin):
         level_text = _sev_color(task_worst, f"{task_worst}-level")
 
         ui.print_(
-            f"\n{header} found {level_text} issues "
-            f"(stop_on_error: {stop_level})."
+            f"\n{header} found {level_text} issues (stop_on_error: {stop_level})."
         )
         ui.print_("What would you like to do?")
         sel = ui.input_options(["Continue", "Skip", "aBort"])
@@ -635,18 +646,27 @@ class AudioHealthPlugin(BeetsPlugin):
             help="check audio files for corruption and log results",
         )
         cmd.parser.add_option(
-            "-f", "--force",
-            action="store_true", default=False, dest="force",
+            "-f",
+            "--force",
+            action="store_true",
+            default=False,
+            dest="force",
             help="recheck items that already have audiohealth results",
         )
         cmd.parser.add_option(
-            "-v", "--verbose",
-            action="store_true", default=False, dest="verbose",
+            "-v",
+            "--verbose",
+            action="store_true",
+            default=False,
+            dest="verbose",
             help="show results for clean files too",
         )
         cmd.parser.add_option(
-            "-w", "--write",
-            action="store_true", default=False, dest="write",
+            "-w",
+            "--write",
+            action="store_true",
+            default=False,
+            dest="write",
             help="write tags to files after updating DB fields",
         )
         cmd.func = self._command
@@ -668,7 +688,8 @@ class AudioHealthPlugin(BeetsPlugin):
             if existing and not overwrite:
                 self._log.info(
                     "audiohealth for {} already set: {} (use -f to recheck)",
-                    shown, existing,
+                    shown,
+                    existing,
                 )
                 if existing in counts:
                     counts[existing] += 1

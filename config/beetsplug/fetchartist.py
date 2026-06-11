@@ -41,7 +41,6 @@ import shutil
 import tempfile
 import unicodedata
 from contextlib import closing
-from pathlib import Path
 from typing import TYPE_CHECKING, Iterator, NamedTuple, Optional
 
 import requests
@@ -53,16 +52,17 @@ from beets.ui import Subcommand, decargs, print_
 from beets.util.artresizer import ArtResizer
 
 if TYPE_CHECKING:
-    from beets.importer import ImportTask
-    from beets.library import Album, Item, Library
+    from beets.library import Library
 
 
 # ---------------------------------------------------------------------------
 #  Data types
 # ---------------------------------------------------------------------------
 
+
 class Candidate(NamedTuple):
     """A potential artist image."""
+
     url: Optional[str] = None
     path: Optional[str] = None
     source_name: str = ""
@@ -73,26 +73,32 @@ class Candidate(NamedTuple):
 #  Helpers
 # ---------------------------------------------------------------------------
 
+
 def _norm(value: str | None) -> str:
     """Normalise a string for fuzzy comparison."""
     if not value:
         return ""
     value = unicodedata.normalize("NFKC", str(value)).casefold()
-    for old, new in {"\u2018": "'", "\u2019": "'", "\u201c": '"',
-                     "\u201d": '"', "&": " and "}.items():
+    for old, new in {
+        "\u2018": "'",
+        "\u2019": "'",
+        "\u201c": '"',
+        "\u201d": '"',
+        "&": " and ",
+    }.items():
         value = value.replace(old, new)
     value = re.sub(r"[^\w\s]+", " ", value)
     return re.sub(r"\s+", " ", value).strip()
 
 
 def _artist_match(left: str | None, right: str | None) -> bool:
-    l, r = _norm(left), _norm(right)
-    if not l or not r:
+    ln, rn = _norm(left), _norm(right)
+    if not ln or not rn:
         return False
-    if l == r:
+    if ln == rn:
         return True
     va = {"various artists", "various", "va"}
-    return l in va and r in va
+    return ln in va and rn in va
 
 
 def _mb_artistid(album) -> Optional[str]:
@@ -218,15 +224,18 @@ IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff"}
 #  Sources
 # ---------------------------------------------------------------------------
 
+
 class ArtistArtSource:
     """Base class for all artist-image sources."""
+
     NAME: str = ""
 
     def __init__(self, log):
         self._log = log
 
-    def get(self, artist_name: str, mb_artistid: Optional[str],
-            album, **kw) -> Iterator[Candidate]:
+    def get(
+        self, artist_name: str, mb_artistid: Optional[str], album, **kw
+    ) -> Iterator[Candidate]:
         """Yield ``Candidate`` objects for the given artist."""
         raise NotImplementedError
 
@@ -235,13 +244,13 @@ class ArtistArtSource:
         timeout = _cfg()["request_timeout"].get(int)
         kwargs.setdefault("timeout", timeout)
         headers = kwargs.pop("headers", {})
-        headers.setdefault("User-Agent",
-                           "beets-fetchartist/1.0 (+https://beets.io)")
+        headers.setdefault("User-Agent", "beets-fetchartist/1.0 (+https://beets.io)")
         return requests.get(url, headers=headers, **kwargs)
 
 
 class FileSystemSource(ArtistArtSource):
     """Look for an existing ``artist.*`` file in the artist directory."""
+
     NAME = "filesystem"
 
     def get(self, artist_name, mb_artistid, album, **kw):
@@ -263,6 +272,7 @@ class FileSystemSource(ArtistArtSource):
 
 class FanartTVSource(ArtistArtSource):
     """fanart.tv ``artistthumb`` images (requires MusicBrainz artist ID)."""
+
     NAME = "fanarttv"
     API_BASE = "https://webservice.fanart.tv/v3/music"
 
@@ -309,6 +319,7 @@ class FanartTVSource(ArtistArtSource):
 
 class TheAudioDBSource(ArtistArtSource):
     """TheAudioDB artist thumbnails (free tier, MB ID or name search)."""
+
     NAME = "theaudiodb"
     API_BASE = "https://www.theaudiodb.com/api/v1/json"
 
@@ -352,7 +363,8 @@ class TheAudioDBSource(ArtistArtSource):
                 if not _artist_match(tadb_name, artist_name):
                     self._log.debug(
                         "theaudiodb: name mismatch: {!r} vs {!r}",
-                        tadb_name, artist_name,
+                        tadb_name,
+                        artist_name,
                     )
                     artist_data = None
 
@@ -361,9 +373,13 @@ class TheAudioDBSource(ArtistArtSource):
             return
 
         # Prefer thumb, then wider images.
-        for key in ("strArtistThumb", "strArtistFanart",
-                     "strArtistFanart2", "strArtistFanart3",
-                     "strArtistFanart4"):
+        for key in (
+            "strArtistThumb",
+            "strArtistFanart",
+            "strArtistFanart2",
+            "strArtistFanart3",
+            "strArtistFanart4",
+        ):
             img_url = artist_data.get(key)
             if img_url and img_url.lower() != "null":
                 self._log.debug("theaudiodb: found {} = {}", key, img_url)
@@ -375,6 +391,7 @@ class TheAudioDBSource(ArtistArtSource):
 
 class SpotifySource(ArtistArtSource):
     """Spotify artist images via client-credentials OAuth."""
+
     NAME = "spotify"
     TOKEN_URL = "https://accounts.spotify.com/api/token"
     API_BASE = "https://api.spotify.com/v1"
@@ -474,6 +491,7 @@ class SpotifySource(ArtistArtSource):
 
 class WikidataSource(ArtistArtSource):
     """Wikidata P18 (image) claims via entity search."""
+
     NAME = "wikidata"
     SEARCH_URL = "https://www.wikidata.org/w/api.php"
     COMMONS_URL = "https://commons.wikimedia.org/w/api.php"
@@ -568,6 +586,7 @@ class WikidataSource(ArtistArtSource):
 
 class DiscogsSource(ArtistArtSource):
     """Discogs artist images (requires personal access token)."""
+
     NAME = "discogs"
     API_BASE = "https://api.discogs.com"
 
@@ -635,6 +654,7 @@ class DiscogsSource(ArtistArtSource):
             return
 
         images = artist_data.get("images") or []
+
         # Sort: primary first, then by area descending.
         def _sort_key(img):
             primary = 0 if img.get("type") == "primary" else 1
@@ -672,11 +692,13 @@ ALL_SOURCES: dict[str, type[ArtistArtSource]] = {
 #  Image processing helpers
 # ---------------------------------------------------------------------------
 
+
 def _download(url: str, log) -> Optional[str]:
     """Download an image URL to a temporary file.  Return the path."""
     try:
         resp = requests.get(
-            url, stream=True,
+            url,
+            stream=True,
             timeout=_cfg()["request_timeout"].get(int),
             headers={"User-Agent": "beets-fetchartist/1.0"},
         )
@@ -695,7 +717,9 @@ def _download(url: str, log) -> Optional[str]:
             suffix = ".gif"
 
         tmp = tempfile.NamedTemporaryFile(
-            suffix=suffix, prefix="fetchartist_", delete=False,
+            suffix=suffix,
+            prefix="fetchartist_",
+            delete=False,
         )
         with closing(resp):
             for chunk in resp.iter_content(8192):
@@ -717,6 +741,7 @@ def _image_size(path: str) -> Optional[tuple[int, int]]:
         pass
     try:
         from PIL import Image
+
         with Image.open(path) as im:
             return im.size
     except Exception:
@@ -770,7 +795,8 @@ def _resize_and_convert(path: str, log) -> str:
         if size and size[0] > maxwidth:
             try:
                 resized = ArtResizer.shared.resize(
-                    maxwidth, path,
+                    maxwidth,
+                    path,
                     quality=quality if quality else 0,
                 )
                 if resized and os.path.isfile(resized):
@@ -783,6 +809,7 @@ def _resize_and_convert(path: str, log) -> str:
     if cover_format:
         try:
             from PIL import Image
+
             target_fmt = cover_format.upper()
             if target_fmt == "JPG":
                 target_fmt = "JPEG"
@@ -790,9 +817,11 @@ def _resize_and_convert(path: str, log) -> str:
                 if im.mode in ("RGBA", "P") and target_fmt == "JPEG":
                     im = im.convert("RGB")
                 ext = {"JPEG": ".jpg", "PNG": ".png", "WEBP": ".webp"}.get(
-                    target_fmt, ".jpg")
+                    target_fmt, ".jpg"
+                )
                 out = tempfile.NamedTemporaryFile(
-                    suffix=ext, prefix="fetchartist_conv_", delete=False)
+                    suffix=ext, prefix="fetchartist_conv_", delete=False
+                )
                 save_kwargs = {}
                 if target_fmt == "JPEG" and quality:
                     save_kwargs["quality"] = quality
@@ -811,48 +840,50 @@ def _resize_and_convert(path: str, log) -> str:
 #  Plugin
 # ---------------------------------------------------------------------------
 
+
 class FetchArtistPlugin(BeetsPlugin):
     def __init__(self) -> None:
         super().__init__()
-        self.config.add({
-            # Behaviour.
-            "auto": True,
-            "overwrite": False,
-            "cautious": False,
-
-            # Source priority (space-separated list, like fetchart).
-            "sources": "filesystem fanarttv theaudiodb spotify wikidata discogs",
-
-            # Output.
-            "filename": "artist",       # saved as  <filename>.jpg
-            "cover_names": ["artist"],   # filesystem source looks for these
-
-            # Image constraints.
-            "minwidth": 300,
-            "maxwidth": 0,              # 0 = no limit
-            "enforce_ratio": True,      # require ~square
-            "ratio_tolerance": 0.5,     # how far from 1:1 is acceptable
-            "cover_format": None,       # JPEG, PNG, WEBP  (None = keep original)
-            "quality": 0,               # JPEG quality (0 = default)
-            "max_filesize": 0,          # bytes (0 = no limit)
-
-            # Source credentials.
-            "fanarttv_key": None,
-            "fanarttv_client_key": None,
-            "theaudiodb_key": "2",      # free API key
-            "spotify_client_id": None,
-            "spotify_client_secret": None,
-            "discogs_token": None,
-
-            # Misc.
-            "request_timeout": 15,
-            "wikidata_search_limit": 5,
-        })
+        self.config.add(
+            {
+                # Behaviour.
+                "auto": True,
+                "overwrite": False,
+                "cautious": False,
+                # Source priority (space-separated list, like fetchart).
+                "sources": "filesystem fanarttv theaudiodb spotify wikidata discogs",
+                # Output.
+                "filename": "artist",  # saved as  <filename>.jpg
+                "cover_names": ["artist"],  # filesystem source looks for these
+                # Image constraints.
+                "minwidth": 300,
+                "maxwidth": 0,  # 0 = no limit
+                "enforce_ratio": True,  # require ~square
+                "ratio_tolerance": 0.5,  # how far from 1:1 is acceptable
+                "cover_format": None,  # JPEG, PNG, WEBP  (None = keep original)
+                "quality": 0,  # JPEG quality (0 = default)
+                "max_filesize": 0,  # bytes (0 = no limit)
+                # Source credentials.
+                "fanarttv_key": None,
+                "fanarttv_client_key": None,
+                "theaudiodb_key": "2",  # free API key
+                "spotify_client_id": None,
+                "spotify_client_secret": None,
+                "discogs_token": None,
+                # Misc.
+                "request_timeout": 15,
+                "wikidata_search_limit": 5,
+            }
+        )
 
         # Redact secrets.
-        for key in ("fanarttv_key", "fanarttv_client_key",
-                     "spotify_client_id", "spotify_client_secret",
-                     "discogs_token"):
+        for key in (
+            "fanarttv_key",
+            "fanarttv_client_key",
+            "spotify_client_id",
+            "spotify_client_secret",
+            "discogs_token",
+        ):
             self.config[key].redact = True
 
         # Session-level cache: tracks artist directories we have already
@@ -869,11 +900,9 @@ class FetchArtistPlugin(BeetsPlugin):
             # import_task_files fires AFTER the filesystem work is done –
             # files have been copied/moved and tags written, so item.path
             # is the final library location.
-            self.register_listener("import_task_files",
-                                   self._on_import_task_files)
+            self.register_listener("import_task_files", self._on_import_task_files)
             # Clear the session cache at the start of each import run.
-            self.register_listener("import_begin",
-                                   self._on_import_begin)
+            self.register_listener("import_begin", self._on_import_begin)
 
     # -- CLI ----------------------------------------------------------------
 
@@ -883,7 +912,10 @@ class FetchArtistPlugin(BeetsPlugin):
             help="download artist images from configured sources",
         )
         cmd.parser.add_option(
-            "-f", "--force", action="store_true", default=False,
+            "-f",
+            "--force",
+            action="store_true",
+            default=False,
             help="overwrite existing artist images",
         )
         cmd.func = self._command
@@ -955,7 +987,9 @@ class FetchArtistPlugin(BeetsPlugin):
 
         adir = _artist_dir(album)
         if not adir:
-            self._log.debug("fetchartist: cannot determine artist dir for {}", artist_name)
+            self._log.debug(
+                "fetchartist: cannot determine artist dir for {}", artist_name
+            )
             return False
 
         # --- Session-level deduplication -----------------------------------
@@ -985,14 +1019,16 @@ class FetchArtistPlugin(BeetsPlugin):
                 if os.path.isfile(existing):
                     self._log.info(
                         "fetchartist: {} already has art: {}",
-                        artist_name, existing,
+                        artist_name,
+                        existing,
                     )
                     return False
 
         mb_id = _mb_artistid(album)
         self._log.info(
             "fetchartist: fetching art for {} (mb_artistid={})",
-            artist_name, mb_id or "none",
+            artist_name,
+            mb_id or "none",
         )
 
         sources = self._ordered_sources()
@@ -1000,7 +1036,8 @@ class FetchArtistPlugin(BeetsPlugin):
         for source in sources:
             self._log.debug(
                 "fetchartist: trying source {} for {}",
-                source.NAME, artist_name,
+                source.NAME,
+                artist_name,
             )
             try:
                 candidates = source.get(
@@ -1009,8 +1046,7 @@ class FetchArtistPlugin(BeetsPlugin):
                     album=album,
                 )
             except Exception as exc:
-                self._log.debug(
-                    "fetchartist: source {} error: {}", source.NAME, exc)
+                self._log.debug("fetchartist: source {} error: {}", source.NAME, exc)
                 continue
 
             for candidate in candidates:
@@ -1042,11 +1078,12 @@ class FetchArtistPlugin(BeetsPlugin):
                     shutil.copy2(processed, dest)
                     self._log.info(
                         "fetchartist: saved {} art -> {} (via {})",
-                        artist_name, dest, candidate.source_name,
+                        artist_name,
+                        dest,
+                        candidate.source_name,
                     )
                 except Exception as exc:
-                    self._log.error(
-                        "fetchartist: failed to save {}: {}", dest, exc)
+                    self._log.error("fetchartist: failed to save {}: {}", dest, exc)
                     continue
                 finally:
                     # Clean up temp files (but not if it was the filesystem source).
